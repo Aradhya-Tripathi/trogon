@@ -48,7 +48,7 @@ class CommandBuilder(Screen):
     BINDINGS = [
         Binding(key="ctrl+r", action="close_and_run", description="Close & Run"),
         Binding(
-            key="ctrl+t", action="focus_command_tree", description="Focus Command Tree"
+            key="ctrl+t", action="toggle_command_tree_focus", description="Toggle Command Tree Focus"
         ),
         Binding(key="ctrl+o", action="show_command_info", description="Command Info"),
         Binding(key="ctrl+s", action="focus('search')", description="Search"),
@@ -264,13 +264,21 @@ class Trogon(App):
         include_root_command = not self.is_grouped_cli
         self.post_run_command = event.command_data.to_cli_args(include_root_command)
 
-    def action_focus_command_tree(self) -> None:
-        try:
-            command_tree = self.query_one(CommandTree)
-        except NoMatches:
-            return
+    def action_toggle_command_tree_focus(self) -> None:
+        if isinstance(self.focused, CommandTree):
+            try:
+                command_form = self.query_one(CommandForm)
+            except NoMatches:
+                return
 
-        command_tree.focus()
+            command_form.focus()
+        else:
+            try:
+                command_tree = self.query_one(CommandTree)
+            except NoMatches:
+                return
+
+            command_tree.focus()
 
     def action_show_command_info(self) -> None:
         command_builder = self.query_one(CommandBuilder)
