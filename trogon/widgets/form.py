@@ -4,18 +4,14 @@ import dataclasses
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import VerticalScroll, Vertical
+from textual.binding import Binding
+from textual.containers import Vertical, VerticalScroll
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Label, Input
+from textual.widgets import Input, Label
 
-from trogon.introspect import (
-    CommandSchema,
-    CommandName,
-    ArgumentSchema,
-    OptionSchema,
-)
-from trogon.run_command import UserCommandData, UserOptionData, UserArgumentData
+from trogon.introspect import ArgumentSchema, CommandName, CommandSchema, OptionSchema
+from trogon.run_command import UserArgumentData, UserCommandData, UserOptionData
 from trogon.widgets.parameter_controls import ParameterControls
 
 
@@ -29,13 +25,13 @@ class CommandForm(Widget):
     """Form which is constructed from an introspected Click app. Users
     make use of this form in order to construct CLI invocation strings."""
 
-    DEFAULT_CSS = """    
+    DEFAULT_CSS = """
     .command-form-heading {
         padding: 1 0 0 1;
         text-style: u;
         color: $text;
     }
-    .command-form-input {        
+    .command-form-input {
         border: tall transparent;
     }
     .command-form-label {
@@ -48,13 +44,12 @@ class CommandForm(Widget):
         border: tall transparent;
     }
     .command-form-checkbox:focus {
-      border: tall $accent;      
+      border: tall $accent;
     }
     .command-form-checkbox:focus > .toggle--label {
         text-style: none;
     }
     .command-form-command-group {
-        
         margin: 1 2;
         padding: 0 1;
         height: auto;
@@ -68,13 +63,20 @@ class CommandForm(Widget):
     .command-form-command-group:focus-within {
         border: panel $primary;
     }
-    .command-form-control-help-text {        
+    .command-form-control-help-text {
         height: auto;
         color: $text 40%;
         padding-top: 0;
         padding-left: 1;
     }
     """
+
+    BINDINGS = [
+        Binding(key="up", action="focus_up", description="Focus on parameter above"),
+        Binding(
+            key="down", action="focus_down", description="Focus on parameter below"
+        ),
+    ]
 
     class Changed(Message):
         def __init__(self, command_data: UserCommandData):
@@ -94,7 +96,7 @@ class CommandForm(Widget):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
         self.command_schema = command_schema
         self.command_schemas = command_schemas
-        self.first_control: ParameterControls | None = None
+        self.parameter_controls: list[ParameterControls] = []
 
     def compose(self) -> ComposeResult:
         path_from_root = iter(reversed(self.command_schema.path_from_root))
@@ -125,16 +127,14 @@ class CommandForm(Widget):
                             yield Label(f"Arguments", classes="command-form-heading")
                             for argument in arguments:
                                 controls = ParameterControls(argument, id=argument.key)
-                                if self.first_control is None:
-                                    self.first_control = controls
+                                self.parameter_controls.append(controls)
                                 yield controls
 
                         if options:
                             yield Label(f"Options", classes="command-form-heading")
                             for option in options:
                                 controls = ParameterControls(option, id=option.key)
-                                if self.first_control is None:
-                                    self.first_control = controls
+                                self.parameter_controls.append(controls)
                                 yield controls
 
                 command_node = next(path_from_root, None)
@@ -209,9 +209,23 @@ class CommandForm(Widget):
         root_command_data.parent = None
         self.post_message(self.Changed(root_command_data))
 
-    def focus(self, scroll_visible: bool = True):
-        if self.first_control is not None:
-            return self.first_control.focus()
+    def action_focus_up(self) -> None:
+        for idx in range(len(self.parameter_controls)):
+            for widget in self.parameter_controls[idx].widgets_controls:
+                if widget.has_focus:
+                    self.parameter_controls[idx - 1].focus()
+
+    def action_focus_down(self) -> None:
+        for idx in range(len(self.parameter_controls)):
+            for widget in self.parameter_controls[idx].widgets_controls:
+                if widget.has_focus:
+                    try:
+                        self.parameter_controls[idx + 1].focus()
+                    except IndexError:
+                        self.parameter_controls[0].focus()
+
+    def focus(self, scroll_visible: bool = True, on: int = 0) -> None:
+        self.parameter_controls[on].focus()
 
     @on(Input.Changed, ".command-form-filter-input")
     def apply_filter(self, event: Input.Changed) -> None:

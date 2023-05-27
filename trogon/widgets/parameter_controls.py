@@ -58,7 +58,7 @@ class ParameterControls(Widget):
     ) -> None:
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
         self.schema = schema
-        self.first_control: Widget | None = None
+        self.widgets_controls: list[Widget] = []
 
     def apply_filter(self, filter_query: str) -> bool:
         """Show or hide this ParameterControls depending on whether it matches the filter query or not.
@@ -84,9 +84,7 @@ class ParameterControls(Widget):
                 name_contains_query = any(
                     filter_query in name.casefold() for name in self.schema.name
                 )
-                help_contains_query = (
-                    filter_query in help_text.casefold()
-                )
+                help_contains_query = filter_query in help_text.casefold()
                 should_be_visible = name_contains_query or help_contains_query
 
             self.display = should_be_visible
@@ -119,9 +117,6 @@ class ParameterControls(Widget):
 
         label = self._make_command_form_control_label(
             name, argument_type, is_option, schema.required, multiple=multiple
-        )
-        first_focus_control: Widget | None = (
-            None  # The widget that will be focused when the form is focused.
         )
 
         # If there are N defaults, we render the "group" N times.
@@ -162,9 +157,8 @@ class ParameterControls(Widget):
                         ):
                             self._apply_default_value(control_widget, default_value)
                             yield control_widget
+                            self.widgets_controls.append(control_widget)
                             # Keep track of the first control we render, for easy focus
-                            if first_focus_control is None:
-                                first_focus_control = control_widget
 
                 # We always need to display the original group of controls,
                 # regardless of whether there are defaults
@@ -177,12 +171,7 @@ class ParameterControls(Widget):
                         # No need to apply defaults to this group
                         for control_widget in widget_group:
                             yield control_widget
-                            if first_focus_control is None:
-                                first_focus_control = control_widget
-
-        # Take note of the first form control, so we can easily focus it
-        if self.first_control is None:
-            self.first_control = first_focus_control
+                            self.widgets_controls.append(control_widget)
 
         # If it's a multiple, and it's a Choice parameter, then we display
         # our special case MultiChoice widget, and so there's no need for this
@@ -424,6 +413,5 @@ class ParameterControls(Widget):
 
         return text
 
-    def focus(self, scroll_visible: bool = True):
-        if self.first_control is not None:
-            self.first_control.focus()
+    def focus(self, scroll_visible: bool = True, on: int = 0):
+        self.widgets_controls[on].focus()
