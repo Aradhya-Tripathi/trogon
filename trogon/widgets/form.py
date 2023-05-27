@@ -72,9 +72,9 @@ class CommandForm(Widget):
     """
 
     BINDINGS = [
-        Binding(key="up", action="focus_up", description="Focus on parameter above"),
+        Binding(key="shift+up", action="focus_up", description="Focus on parameter above"),
         Binding(
-            key="down", action="focus_down", description="Focus on parameter below"
+            key="shift+down", action="focus_down", description="Focus on parameter below"
         ),
     ]
 
