@@ -97,6 +97,7 @@ class CommandForm(Widget):
         self.command_schema = command_schema
         self.command_schemas = command_schemas
         self.parameter_controls: list[ParameterControls] = []
+        self.has_focus: int | None = None
 
     def compose(self) -> ComposeResult:
         path_from_root = iter(reversed(self.command_schema.path_from_root))
@@ -210,21 +211,19 @@ class CommandForm(Widget):
         self.post_message(self.Changed(root_command_data))
 
     def action_focus_up(self) -> None:
-        for idx in range(len(self.parameter_controls)):
-            for widget in self.parameter_controls[idx].widgets_controls:
-                if widget.has_focus:
-                    self.parameter_controls[idx - 1].focus()
+        try:
+            self.focus(on=self.has_focus - 1)
+        except IndexError:
+            self.focus(on=len(self.parameter_controls) - 1)
 
     def action_focus_down(self) -> None:
-        for idx in range(len(self.parameter_controls)):
-            for widget in self.parameter_controls[idx].widgets_controls:
-                if widget.has_focus:
-                    try:
-                        self.parameter_controls[idx + 1].focus()
-                    except IndexError:
-                        self.parameter_controls[0].focus()
+        try:
+            self.focus(on=self.has_focus + 1)
+        except IndexError:
+            self.focus()
 
     def focus(self, scroll_visible: bool = True, on: int = 0) -> None:
+        self.has_focus = on
         self.parameter_controls[on].focus()
 
     @on(Input.Changed, ".command-form-filter-input")
