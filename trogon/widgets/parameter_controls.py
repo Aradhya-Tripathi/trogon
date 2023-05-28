@@ -58,7 +58,7 @@ class ParameterControls(Widget):
     ) -> None:
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
         self.schema = schema
-        self.widgets_controls: list[Widget] = []
+        self.last_control_widget: Widget | None = None
 
     def apply_filter(self, filter_query: str) -> bool:
         """Show or hide this ParameterControls depending on whether it matches the filter query or not.
@@ -157,7 +157,6 @@ class ParameterControls(Widget):
                         ):
                             self._apply_default_value(control_widget, default_value)
                             yield control_widget
-                            self.widgets_controls.append(control_widget)
                             # Keep track of the first control we render, for easy focus
 
                 # We always need to display the original group of controls,
@@ -171,7 +170,8 @@ class ParameterControls(Widget):
                         # No need to apply defaults to this group
                         for control_widget in widget_group:
                             yield control_widget
-                            self.widgets_controls.append(control_widget)
+
+                self.last_control_widget = control_widget
 
         # If it's a multiple, and it's a Choice parameter, then we display
         # our special case MultiChoice widget, and so there's no need for this
@@ -413,5 +413,6 @@ class ParameterControls(Widget):
 
         return text
 
-    def focus(self, scroll_visible: bool = True, on: int = 0):
-        self.widgets_controls[on].focus()
+    def focus(self, scroll_visible: bool = True):
+        if self.last_control_widget:
+            self.last_control_widget.focus()
